@@ -5,8 +5,8 @@ publishedAt: 2026-11-24
 category: ai
 kind: note
 status: raw
-tags: [learning, ai, harness]
-draft: true
+tags: [learning, ai, harness, observational-memory, pi]
+draft: false
 ---
 
 # My Agent Harness (so far)
