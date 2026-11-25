@@ -1,0 +1,31 @@
+---
+import { getEntry, render } from 'astro:content';
+import NotebookSheet from '../components/reader/NotebookSheet.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { EPISTEMIC_STATUSES } from '../site.config';
+
+const page = await getEntry('pages', 'disclaimer');
+if (!page) {
+  throw new Error('Missing src/content/pages/disclaimer.md');
+}
+const { Content } = await render(page);
+---
+
+<BaseLayout title="Disclaimer" description={page.data.description ?? 'A note to the reader.'}>
+  <NotebookSheet title={page.data.title} description={page.data.description}>
+    <Content />
+
+    <h2>Epistemic status labels</h2>
+    <p>
+      Every entry includes an epistemic status label to indicate how tentative or tested the notes
+      are. None of these labels imply formal peer review:
+    </p>
+    <ul>
+      {Object.entries(EPISTEMIC_STATUSES).map(([, info]) => (
+        <li>
+          <strong>{info.label}:</strong> {info.description}
+        </li>
+      ))}
+    </ul>
+  </NotebookSheet>
+</BaseLayout>

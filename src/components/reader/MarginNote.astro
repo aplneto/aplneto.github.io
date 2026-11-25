@@ -1,0 +1,12 @@
+---
+interface Props {
+  label?: string;
+}
+
+const { label = 'Margin note' } = Astro.props;
+---
+
+<aside class="nb-margin-note">
+  <span class="nb-margin-note__label">{label}</span>
+  <slot />
+</aside>

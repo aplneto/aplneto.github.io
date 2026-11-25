@@ -1,0 +1,92 @@
+---
+import { getCollection } from 'astro:content';
+import NotebookSheet from '../../components/reader/NotebookSheet.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { CATEGORIES, EPISTEMIC_STATUSES, KINDS } from '../../site.config';
+import { formatIsoDate, isPublished, sortEntriesByDate, withBase } from '../../utils/content';
+
+const entries = sortEntriesByDate(
+  await getCollection('entries', (entry) => isPublished(entry)),
+);
+---
+
+<BaseLayout title="Notes" description="Browsable index of published notes, experiments, and devlogs.">
+  <NotebookSheet
+    title="Notes"
+    description="Everything currently open on the desk — notes, experiments, devlogs, and half-formed thoughts."
+    doodleKind="miscellaneous"
+  >
+    {entries.length === 0 ? (
+      <p>
+        No published entries yet. The pages are still blank — check back later, or read the{' '}
+        <a href={withBase('/disclaimer/')}>reader disclaimer</a> to see what this notebook is for.
+      </p>
+    ) : (
+      <ul class="entry-index">
+        {entries.map((entry) => (
+          <li class="entry-index__item">
+            <div class="entry-index__meta">
+              <time datetime={formatIsoDate(entry.data.publishedAt)}>
+                {formatIsoDate(entry.data.publishedAt)}
+              </time>
+              {entry.data.entryNumber && <span>#{String(entry.data.entryNumber).padStart(3, '0')}</span>}
+              <span>{CATEGORIES[entry.data.category].shortLabel}</span>
+              <span>{KINDS[entry.data.kind]}</span>
+              <span>{EPISTEMIC_STATUSES[entry.data.status].label}</span>
+              {entry.data.draft && <span class="notebook-badge notebook-badge--draft">Draft</span>}
+            </div>
+            <h2 class="entry-index__title">
+              <a href={withBase(`/notes/${entry.id}/`)}>{entry.data.title}</a>
+            </h2>
+            <p class="entry-index__desc">{entry.data.description}</p>
+          </li>
+        ))}
+      </ul>
+    )}
+
+    <h2>Epistemic status guide</h2>
+    <p>
+      Entries carry an explicit status so you know how much weight to give them. None of these
+      statuses constitute peer review:
+    </p>
+    <ul>
+      {Object.entries(EPISTEMIC_STATUSES).map(([, info]) => (
+        <li>
+          <strong>{info.label}:</strong> {info.description}
+        </li>
+      ))}
+    </ul>
+  </NotebookSheet>
+</BaseLayout>
+
+<style>
+  .entry-index {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+  }
+
+  .entry-index__item {
+    padding: 0.75rem 0 1rem;
+    border-bottom: 1px dashed var(--nb-rule);
+  }
+
+  .entry-index__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--nb-graphite);
+  }
+
+  .entry-index__title {
+    margin: 0.25rem 0 0.2rem !important;
+    font-size: 1.75rem !important;
+  }
+
+  .entry-index__desc {
+    margin: 0 !important;
+    color: var(--nb-graphite);
+  }
+</style>

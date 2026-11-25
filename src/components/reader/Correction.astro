@@ -1,0 +1,14 @@
+---
+interface Props {
+  date?: string;
+  original?: string;
+}
+
+const { date, original } = Astro.props;
+---
+
+<div class="nb-correction" role="note">
+  <strong>Correction{date ? ` (${date})` : ''}:</strong>{' '}
+  {original && <span class="nb-correction__old">{original}</span>}{' '}
+  <span><slot /></span>
+</div>

@@ -1,0 +1,18 @@
+---
+import { getEntry, render } from 'astro:content';
+import NotebookSheet from '../components/reader/NotebookSheet.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_CONFIG } from '../site.config';
+
+const page = await getEntry('pages', 'about');
+if (!page) {
+  throw new Error('Missing src/content/pages/about.md');
+}
+const { Content } = await render(page);
+---
+
+<BaseLayout title={page.data.title} description={page.data.description ?? SITE_CONFIG.headline}>
+  <NotebookSheet title={page.data.title} description={page.data.description}>
+    <Content />
+  </NotebookSheet>
+</BaseLayout>

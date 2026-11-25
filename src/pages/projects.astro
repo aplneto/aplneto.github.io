@@ -1,0 +1,70 @@
+---
+import { getCollection, render } from 'astro:content';
+import NotebookSheet from '../components/reader/NotebookSheet.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { isPublished, withBase } from '../utils/content';
+
+const projects = (await getCollection('projects', (p) => isPublished(p))).sort((a, b) =>
+  a.data.title.localeCompare(b.data.title, 'en'),
+);
+
+const renderedProjects = await Promise.all(
+  projects.map(async (project) => ({
+    project,
+    Content: (await render(project)).Content,
+  })),
+);
+---
+
+<BaseLayout title="Projects" description="A modest directory of things being built.">
+  <NotebookSheet
+    title="Projects"
+    description="Small tools, experiments, and things built along the way."
+    doodleKind="engineering"
+  >
+    {renderedProjects.length === 0 ? (
+      <p>
+        No published projects listed yet. Check <a href={withBase('/notes/')}>notes</a> for
+        ongoing write-ups.
+      </p>
+    ) : (
+      <div class="projects-list">
+        {renderedProjects.map(({ project, Content }) => (
+          <section class="project-item" id={project.id}>
+            <h2>{project.data.title}</h2>
+            <p>{project.data.description}</p>
+            <div class="notebook-meta" style="margin-bottom: 0.75rem;">
+              {project.data.draft && <span class="notebook-badge notebook-badge--draft">Draft</span>}
+              {project.data.status && <span class="notebook-badge">{project.data.status}</span>}
+              {project.data.stack.map((tech) => (
+                <span class="notebook-badge">{tech}</span>
+              ))}
+              {project.data.repository && (
+                <a href={project.data.repository} rel="noopener noreferrer">
+                  Repository
+                </a>
+              )}
+              {project.data.url && (
+                <a href={project.data.url} rel="noopener noreferrer">
+                  Live link
+                </a>
+              )}
+            </div>
+            <Content />
+          </section>
+        ))}
+      </div>
+    )}
+  </NotebookSheet>
+</BaseLayout>
+
+<style>
+  .project-item {
+    padding: 0.75rem 0 1.25rem;
+    border-bottom: 1px dashed var(--nb-rule);
+  }
+
+  .project-item:last-child {
+    border-bottom: none;
+  }
+</style>

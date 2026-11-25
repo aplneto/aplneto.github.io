@@ -1,0 +1,80 @@
+---
+import { getCollection } from 'astro:content';
+import NotebookSheet from '../components/reader/NotebookSheet.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { CATEGORIES, EPISTEMIC_STATUSES } from '../site.config';
+import { formatIsoDate, isPublished, sortEntriesByDate, withBase } from '../utils/content';
+
+const experiments = sortEntriesByDate(
+  await getCollection(
+    'entries',
+    (entry) => isPublished(entry) && entry.data.kind === 'experiment',
+  ),
+);
+---
+
+<BaseLayout title="Experiments" description="Practical experiments, observations, and lab logs.">
+  <NotebookSheet
+    title="Experiments"
+    description="Hands-on investigations and lab logs. Observations here are practical notes, not guarantees."
+    doodleKind="ai"
+  >
+    {experiments.length === 0 ? (
+      <p>
+        No published experiments yet. Browse <a href={withBase('/notes/')}>all notes</a> or return to{' '}
+        <a href={withBase('/')}>the desktop</a>.
+      </p>
+    ) : (
+      <ul class="exp-list">
+        {experiments.map((entry) => (
+          <li>
+            <div class="exp-meta">
+              <time datetime={formatIsoDate(entry.data.publishedAt)}>
+                {formatIsoDate(entry.data.publishedAt)}
+              </time>
+              <span>{CATEGORIES[entry.data.category].shortLabel}</span>
+              <span>{EPISTEMIC_STATUSES[entry.data.status].label}</span>
+              {entry.data.draft && <span class="notebook-badge notebook-badge--draft">Draft</span>}
+            </div>
+            <h2>
+              <a href={withBase(`/notes/${entry.id}/`)}>{entry.data.title}</a>
+            </h2>
+            <p>{entry.data.description}</p>
+          </li>
+        ))}
+      </ul>
+    )}
+  </NotebookSheet>
+</BaseLayout>
+
+<style>
+  .exp-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .exp-list li {
+    padding: 0.75rem 0 1rem;
+    border-bottom: 1px dashed var(--nb-rule);
+  }
+
+  .exp-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--nb-graphite);
+  }
+
+  .exp-list h2 {
+    margin: 0.25rem 0 0.2rem !important;
+    font-size: 1.7rem !important;
+  }
+
+  .exp-list p {
+    margin: 0 !important;
+    color: var(--nb-graphite);
+  }
+</style>

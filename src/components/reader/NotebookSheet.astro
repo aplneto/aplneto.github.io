@@ -1,0 +1,131 @@
+---
+import { CATEGORIES, EPISTEMIC_STATUSES, KINDS, type CategoryKey, type EpistemicStatusKey, type KindKey } from '../../site.config';
+import { withBase } from '../../utils/content';
+
+export interface HeadingItem {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  title: string;
+  description?: string;
+  dateLabel?: string;
+  updatedLabel?: string;
+  entryNumber?: number | null;
+  category?: CategoryKey;
+  kind?: KindKey;
+  status?: EpistemicStatusKey;
+  tags?: string[];
+  readingTimeMinutes?: number;
+  draft?: boolean;
+  repository?: string | null;
+  retractionReason?: string | null;
+  retractedAtLabel?: string;
+  headings?: HeadingItem[];
+  doodleKind?: CategoryKey | 'system';
+  showHoles?: boolean;
+}
+
+const {
+  title,
+  description,
+  dateLabel = '',
+  updatedLabel,
+  entryNumber,
+  category,
+  kind,
+  status,
+  tags = [],
+  readingTimeMinutes,
+  draft = false,
+  repository,
+  retractionReason,
+  retractedAtLabel,
+  headings = [],
+  doodleKind = category ?? 'system',
+  showHoles = true,
+} = Astro.props;
+
+const tocHeadings = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const showToc = tocHeadings.length >= 3;
+---
+
+<div class:list={['notebook-page-grid', { 'notebook-page-grid--with-toc': showToc }]}>
+  {showToc && (
+    <aside class="notebook-toc" aria-label="Table of contents">
+      <h2 class="notebook-toc__title">Contents</h2>
+      <ul>
+        {tocHeadings.map((h) => (
+          <li data-depth={h.depth}>
+            <a href={`#${h.slug}`}>{h.text}</a>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  )}
+
+  <article class="notebook-sheet">
+    <header class="notebook-header">
+      <div class="notebook-header__top">
+        {entryNumber ? (
+          <span class="notebook-entry-num">Entry #{String(entryNumber).padStart(3, '0')}</span>
+        ) : (
+          <span class="notebook-entry-num">Entry</span>
+        )}
+        {dateLabel && (
+          <div class="notebook-date-box" aria-label={`Date: ${dateLabel}`}>
+            {dateLabel}
+          </div>
+        )}
+      </div>
+
+      <h1 class="notebook-title">{title}</h1>
+      {description && <p class="notebook-subtitle">{description}</p>}
+
+      <div class="notebook-meta">
+        {draft && <span class="notebook-badge notebook-badge--draft">Draft</span>}
+        {category && <span class="notebook-badge">{CATEGORIES[category].shortLabel}</span>}
+        {kind && <span class="notebook-badge">{KINDS[kind]}</span>}
+        {status && (
+          <span
+            class:list={['notebook-badge', { 'notebook-badge--retracted': status === 'retracted' }]}
+            title={EPISTEMIC_STATUSES[status].description}
+          >
+            Status: {EPISTEMIC_STATUSES[status].label}
+          </span>
+        )}
+        {readingTimeMinutes && <span>{readingTimeMinutes} min read</span>}
+        {updatedLabel && <span>Updated {updatedLabel}</span>}
+        {repository && (
+          <a href={repository} rel="noopener noreferrer">
+            Repository
+          </a>
+        )}
+      </div>
+
+      {tags.length > 0 && (
+        <div class="notebook-meta" style="margin-top: 0.55rem;">
+          {tags.map((tag) => (
+            <a class="notebook-badge" href={withBase(`/tags/${encodeURIComponent(tag)}/`)}>
+              #{tag}
+            </a>
+          ))}
+        </div>
+      )}
+    </header>
+
+    {status === 'retracted' && (
+      <div class="notebook-retraction-banner" role="note">
+        <strong>Retracted entry{retractedAtLabel ? ` (${retractedAtLabel})` : ''}:</strong>{' '}
+        {retractionReason ||
+          'The author no longer endorses the conclusions in this entry. It remains public for transparency.'}
+      </div>
+    )}
+
+    <div class="notebook-prose">
+      <slot />
+    </div>
+  </article>
+</div>

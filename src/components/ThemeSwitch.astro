@@ -1,0 +1,75 @@
+---
+interface Props {
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+---
+
+<button
+  type="button"
+  class:list={['theme-switch', { 'theme-switch--compact': compact }]}
+  data-theme-toggle
+  aria-label="Toggle color theme"
+  title="Toggle light or dark notebook theme"
+>
+  <span class="theme-switch__icon" aria-hidden="true" data-theme-icon>◐</span>
+  <span class="theme-switch__label" data-theme-label>Theme</span>
+</button>
+
+<script>
+  function getEffectiveTheme(): 'light' | 'dark' {
+    const explicit = document.documentElement.dataset.theme;
+    if (explicit === 'light' || explicit === 'dark') return explicit;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
+  function syncThemeButtons(): void {
+    const theme = getEffectiveTheme();
+    document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]').forEach((btn) => {
+      const icon = btn.querySelector('[data-theme-icon]');
+      const label = btn.querySelector('[data-theme-label]');
+      if (icon) icon.textContent = theme === 'dark' ? '☀' : '☾';
+      if (label) label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+      btn.setAttribute('aria-pressed', String(theme === 'dark'));
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement | null)?.closest('[data-theme-toggle]');
+    if (!btn) return;
+    const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem('notebook-theme', next);
+    } catch {
+      // Ignore storage errors
+    }
+    syncThemeButtons();
+  });
+
+  syncThemeButtons();
+</script>
+
+<style>
+  .theme-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.65rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--os-panel-text);
+    font-size: 0.84rem;
+  }
+
+  .theme-switch:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .theme-switch--compact {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.78rem;
+  }
+</style>

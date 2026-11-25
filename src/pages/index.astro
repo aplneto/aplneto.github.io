@@ -1,0 +1,964 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import NotebookSheet from '../components/reader/NotebookSheet.astro';
+import ThemeSwitch from '../components/ThemeSwitch.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadBuiltManifest } from '../lib/filesystem/loadManifest';
+import { HOME_PATH } from '../lib/filesystem/paths';
+import { SITE_CONFIG } from '../site.config';
+import {
+  estimateReadingTimeMinutes,
+  formatIsoDate,
+  isPublished,
+  sortEntriesByDate,
+  withBase,
+} from '../utils/content';
+
+const { manifest } = await loadBuiltManifest();
+
+const entries = sortEntriesByDate(
+  await getCollection('entries', (entry) => isPublished(entry)),
+);
+const renderedEntries = await Promise.all(
+  entries.map(async (entry) => ({
+    entry,
+    Content: (await render(entry)).Content,
+  })),
+);
+
+const projects = (await getCollection('projects', (p) => isPublished(p))).sort((a, b) =>
+  a.data.title.localeCompare(b.data.title, 'en'),
+);
+const renderedProjects = await Promise.all(
+  projects.map(async (project) => ({
+    project,
+    Content: (await render(project)).Content,
+  })),
+);
+
+const readmePage = await getEntry('pages', 'readme');
+const disclaimerPage = await getEntry('pages', 'disclaimer');
+const aboutPage = await getEntry('pages', 'about');
+const contactPage = await getEntry('pages', 'contact');
+if (!readmePage || !disclaimerPage || !aboutPage || !contactPage) {
+  throw new Error('Missing system markdown files in src/content/pages/');
+}
+const renderedReadme = await render(readmePage);
+const renderedDisclaimer = await render(disclaimerPage);
+const renderedAbout = await render(aboutPage);
+const renderedContact = await render(contactPage);
+
+// Map each entry/project id to its virtual path in the manifest
+const nodeByUrl = new Map<string, string>();
+for (const node of Object.values(manifest.nodes)) {
+  if (node.type === 'file' && node.canonicalUrl) {
+    nodeByUrl.set(node.canonicalUrl, node.path);
+  }
+}
+---
+
+<BaseLayout title={SITE_CONFIG.siteName} description={SITE_CONFIG.description} desktop>
+  <div
+    class="desktop-shell"
+    data-desktop-root
+    style={`--desktop-wallpaper: url('${withBase('/pictures/wallpaper.svg')}')`}
+  >
+    <!-- Top panel -->
+    <header class="desktop-panel">
+      <div class="desktop-panel__left">
+        <span class="desktop-panel__brand">
+          <span aria-hidden="true">📓</span>
+          <span>{SITE_CONFIG.siteName}</span>
+        </span>
+        <span class="desktop-panel__session" title="Read-only simulated guest session">
+          guest@notebook
+        </span>
+      </div>
+
+      <div class="desktop-panel__actions">
+        <ThemeSwitch compact />
+      </div>
+    </header>
+
+    <!-- Desktop workspace -->
+    <div class="desktop-workspace">
+      <aside class="desktop-shortcuts" aria-label="Desktop shortcuts">
+        <button
+          type="button"
+          class="desktop-shortcut"
+          data-open-app="files"
+          data-open-path={HOME_PATH}
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">🏠</span>
+          <span>Home</span>
+        </button>
+
+        <button
+          type="button"
+          class="desktop-shortcut"
+          data-open-app="files"
+          data-open-path={`${HOME_PATH}/Desktop/pictures`}
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">📁</span>
+          <span>Pictures</span>
+        </button>
+
+        <button
+          type="button"
+          class="desktop-shortcut"
+          data-open-app="terminal"
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">⌨️</span>
+          <span>Terminal</span>
+        </button>
+
+        <button
+          type="button"
+          class="desktop-shortcut"
+          data-open-app="reader"
+          data-open-path={`${HOME_PATH}/README.md`}
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">📄</span>
+          <span>README.md</span>
+        </button>
+
+        <button
+          type="button"
+          class="desktop-shortcut"
+          data-open-app="reader"
+          data-open-path={`${HOME_PATH}/DISCLAIMER.md`}
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">📌</span>
+          <span>DISCLAIMER.md</span>
+        </button>
+
+        <button
+          type="button"
+          class="desktop-shortcut"
+          data-open-app="settings"
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">⚙️</span>
+          <span>Settings</span>
+        </button>
+
+        <button
+          type="button"
+          class="desktop-shortcut"
+          data-open-app="about"
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">ℹ️</span>
+          <span>About</span>
+        </button>
+      </aside>
+
+      <div class="desktop-stage">
+        <div class="desktop-intro">
+          <h1>{SITE_CONFIG.headline}</h1>
+          <p>
+            {SITE_CONFIG.motto} {SITE_CONFIG.tagline}
+          </p>
+        </div>
+
+        <!-- File Manager Window -->
+        <section
+          class="os-window"
+          data-app-window="files"
+          aria-label="File Manager"
+        >
+          <header class="os-window__bar">
+            <strong class="os-window__title">File Manager — /home/guest</strong>
+            <div class="os-window__controls">
+              <button
+                type="button"
+                class="os-win-btn"
+                data-minimize-app="files"
+                aria-label="Minimize File Manager"
+              >
+                —
+              </button>
+              <button
+                type="button"
+                class="os-win-btn"
+                data-close-app="files"
+                aria-label="Close File Manager"
+              >
+                ×
+              </button>
+            </div>
+          </header>
+
+          <div class="fm-toolbar">
+            <button
+              type="button"
+              class="fm-btn"
+              data-fm-up
+              data-app-focus
+              aria-label="Go to parent directory"
+            >
+              ↑ Up
+            </button>
+            <nav class="fm-breadcrumbs" data-fm-breadcrumbs aria-label="Directory breadcrumbs"></nav>
+            <div class="fm-view-switch" role="group" aria-label="File manager layout">
+              <button type="button" class="fm-btn" data-fm-view="list" aria-pressed="true">
+                List
+              </button>
+              <button type="button" class="fm-btn" data-fm-view="grid" aria-pressed="false">
+                Grid
+              </button>
+            </div>
+          </div>
+
+          <div class="fm-body" data-fm-items>
+            <noscript>
+              <p class="fm-empty">
+                JavaScript is disabled. You can browse{' '}
+                <a href={withBase('/notes/')}>all notes</a>,{' '}
+                <a href={withBase('/experiments/')}>experiments</a>,{' '}
+                <a href={withBase('/projects/')}>projects</a>, or the{' '}
+                <a href={withBase('/disclaimer/')}>disclaimer</a> directly.
+              </p>
+            </noscript>
+          </div>
+        </section>
+
+        <!-- Notebook Reader Window -->
+        <section
+          class="os-window os-window--reader"
+          data-app-window="reader"
+          aria-label="Notebook Reader"
+          hidden
+        >
+          <header class="os-window__bar">
+            <strong class="os-window__title" data-reader-window-title>Notebook Reader</strong>
+            <div class="os-window__controls">
+              <a
+                class="os-win-link"
+                href={withBase('/notes/')}
+                data-reader-canonical
+              >
+                Standalone page ↗
+              </a>
+              <button
+                type="button"
+                class="os-win-btn"
+                data-open-app="files"
+                data-app-focus
+              >
+                ← Files
+              </button>
+              <button
+                type="button"
+                class="os-win-btn"
+                data-minimize-app="reader"
+                aria-label="Minimize Notebook Reader"
+              >
+                —
+              </button>
+              <button
+                type="button"
+                class="os-win-btn"
+                data-close-app="reader"
+                aria-label="Close Notebook Reader"
+              >
+                ×
+              </button>
+            </div>
+          </header>
+
+          <div class="os-window__body os-window__body--reader" data-reader-mount></div>
+        </section>
+
+        <!-- Terminal Window -->
+        <section
+          class="os-window os-window--terminal"
+          data-app-window="terminal"
+          aria-label="Terminal"
+          hidden
+        >
+          <header class="os-window__bar">
+            <strong class="os-window__title">Terminal — guest@notebook:~</strong>
+            <div class="os-window__controls">
+              <button
+                type="button"
+                class="os-win-btn"
+                data-minimize-app="terminal"
+                aria-label="Minimize Terminal"
+              >
+                —
+              </button>
+              <button
+                type="button"
+                class="os-win-btn"
+                data-close-app="terminal"
+                aria-label="Close Terminal"
+              >
+                ×
+              </button>
+            </div>
+          </header>
+
+          <div class="os-window__body os-window__body--terminal" data-terminal-mount></div>
+        </section>
+
+        <!-- Settings Window -->
+        <section
+          class="os-window os-window--small"
+          data-app-window="settings"
+          aria-label="Settings"
+          hidden
+        >
+          <header class="os-window__bar">
+            <strong class="os-window__title">Settings</strong>
+            <div class="os-window__controls">
+              <button
+                type="button"
+                class="os-win-btn"
+                data-close-app="settings"
+                data-app-focus
+                aria-label="Close Settings"
+              >
+                ×
+              </button>
+            </div>
+          </header>
+
+          <div class="os-window__body os-settings">
+            <fieldset>
+              <legend>Notebook theme</legend>
+              <label>
+                <input type="radio" name="desktop-theme" value="system" />
+                System preference
+              </label>
+              <label>
+                <input type="radio" name="desktop-theme" value="light" />
+                Light (ruled notebook paper)
+              </label>
+              <label>
+                <input type="radio" name="desktop-theme" value="dark" />
+                Dark (black stationery)
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Desktop background</legend>
+              <label>
+                <input type="radio" name="desktop-wallpaper" value="default" checked />
+                Default wallpaper
+              </label>
+              <label>
+                <input type="radio" name="desktop-wallpaper" value="solid" />
+                Solid dusty blue
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Accessibility</legend>
+              <label>
+                <input type="checkbox" data-setting-reduced-motion />
+                Reduce motion and transitions
+              </label>
+            </fieldset>
+
+            <p class="os-settings__note">
+              Preferences are stored locally in your browser (`localStorage`). No cookies,
+              accounts, or tracking are used.
+            </p>
+          </div>
+        </section>
+
+        <!-- About Window -->
+        <section
+          class="os-window os-window--small"
+          data-app-window="about"
+          aria-label="About aplneto"
+          hidden
+        >
+          <header class="os-window__bar">
+            <strong class="os-window__title">About {SITE_CONFIG.siteName}</strong>
+            <div class="os-window__controls">
+              <button
+                type="button"
+                class="os-win-btn"
+                data-close-app="about"
+                data-app-focus
+                aria-label="Close About"
+              >
+                ×
+              </button>
+            </div>
+          </header>
+
+          <div class="os-window__body os-settings">
+            <h2>{SITE_CONFIG.siteName}</h2>
+            <p>{SITE_CONFIG.headline}</p>
+            <p>{SITE_CONFIG.description}</p>
+            <p>
+              <strong>Author:</strong> {SITE_CONFIG.authorName}
+              <br />
+              <strong>Contact:</strong>{' '}
+              <a href={`mailto:${SITE_CONFIG.contactEmail}`}>{SITE_CONFIG.contactEmail}</a>
+            </p>
+            <p>
+              <a href={withBase('/about/')}>Open full About page</a> ·{' '}
+              <a href={withBase('/disclaimer/')}>Read Disclaimer</a>
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Taskbar -->
+    <nav class="desktop-taskbar" aria-label="Open applications" data-taskbar-apps>
+      <button type="button" class="taskbar-btn" data-taskbar-app="files">
+        📁 File Manager
+      </button>
+      <button type="button" class="taskbar-btn" data-taskbar-app="reader" hidden>
+        📓 Reader
+      </button>
+      <button type="button" class="taskbar-btn" data-taskbar-app="terminal" hidden>
+        ⌨️ Terminal
+      </button>
+      <button type="button" class="taskbar-btn" data-taskbar-app="settings" hidden>
+        ⚙️ Settings
+      </button>
+      <button type="button" class="taskbar-btn" data-taskbar-app="about" hidden>
+        ℹ️ About
+      </button>
+    </nav>
+
+    <!-- Pre-rendered hidden reader sources for instant, offline-friendly reading -->
+    <div hidden aria-hidden="true">
+      <div data-reader-source={`${HOME_PATH}/README.md`}>
+        <NotebookSheet
+          title={readmePage.data.title}
+          description={readmePage.data.description}
+        >
+          <renderedReadme.Content />
+        </NotebookSheet>
+      </div>
+
+      <div data-reader-source={`${HOME_PATH}/DISCLAIMER.md`}>
+        <NotebookSheet
+          title={disclaimerPage.data.title}
+          description={disclaimerPage.data.description}
+        >
+          <renderedDisclaimer.Content />
+        </NotebookSheet>
+      </div>
+
+      <div data-reader-source={`${HOME_PATH}/about.md`}>
+        <NotebookSheet
+          title={aboutPage.data.title}
+          description={aboutPage.data.description}
+        >
+          <renderedAbout.Content />
+        </NotebookSheet>
+      </div>
+
+      <div data-reader-source={`${HOME_PATH}/contact.md`}>
+        <NotebookSheet
+          title={contactPage.data.title}
+          description={contactPage.data.description}
+        >
+          <renderedContact.Content />
+        </NotebookSheet>
+      </div>
+
+      {renderedEntries.map(({ entry, Content }) => {
+        const canonical = withBase(`/notes/${entry.id}/`);
+        const vPath = nodeByUrl.get(canonical);
+        if (!vPath) return null;
+        return (
+          <div data-reader-source={vPath}>
+            <NotebookSheet
+              title={entry.data.title}
+              description={entry.data.description}
+              dateLabel={formatIsoDate(entry.data.publishedAt)}
+              updatedLabel={entry.data.updatedAt ? formatIsoDate(entry.data.updatedAt) : undefined}
+              entryNumber={entry.data.entryNumber}
+              category={entry.data.category}
+              kind={entry.data.kind}
+              status={entry.data.status}
+              tags={entry.data.tags}
+              readingTimeMinutes={estimateReadingTimeMinutes(entry.body)}
+              draft={entry.data.draft}
+              repository={entry.data.repository}
+              retractionReason={entry.data.retractionReason}
+              retractedAtLabel={
+                entry.data.retractedAt ? formatIsoDate(entry.data.retractedAt) : undefined
+              }
+              doodleKind={entry.data.category}
+              showHoles={false}
+            >
+              <Content />
+            </NotebookSheet>
+          </div>
+        );
+      })}
+
+      {renderedProjects.map(({ project, Content }) => {
+        const canonical = withBase(`/projects/#${project.id}`);
+        const vPath = nodeByUrl.get(canonical);
+        if (!vPath) return null;
+        return (
+          <div data-reader-source={vPath}>
+            <NotebookSheet
+              title={project.data.title}
+              description={project.data.description}
+              draft={project.data.draft}
+              doodleKind="engineering"
+              showHoles={false}
+            >
+              <Content />
+            </NotebookSheet>
+          </div>
+        );
+      })}
+    </div>
+
+    <script type="application/json" data-vfs-manifest set:html={JSON.stringify(manifest)} />
+  </div>
+</BaseLayout>
+
+<script>
+  import { initDesktopShell } from '../lib/desktop/desktopController';
+  import type { VfsManifest } from '../lib/filesystem/types';
+
+  const root = document.querySelector<HTMLElement>('[data-desktop-root]');
+  const manifestEl = document.querySelector<HTMLScriptElement>('script[data-vfs-manifest]');
+  if (root && manifestEl?.textContent) {
+    const manifest = JSON.parse(manifestEl.textContent) as VfsManifest;
+    initDesktopShell(root, manifest);
+  }
+</script>
+
+<style>
+  .desktop-shell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 3.2rem);
+    background-color: var(--os-desktop);
+    background-image: var(--desktop-wallpaper, none);
+    background-size: cover;
+    background-position: center;
+    color: var(--os-panel-text);
+  }
+
+  .desktop-shell[data-wallpaper='solid'] {
+    background-image: none;
+  }
+
+  .desktop-panel {
+    background: var(--os-panel);
+    color: var(--os-panel-text);
+    padding: 0.45rem clamp(0.75rem, 2.5vw, 1.5rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .desktop-panel__left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .desktop-panel__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    font-size: 0.94rem;
+  }
+
+  .desktop-panel__session {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.14rem 0.5rem;
+    border-radius: 0.25rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #c5dcf3;
+  }
+
+  .desktop-panel__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .desktop-workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 7.25rem minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: clamp(0.75rem, 2.5vw, 1.5rem);
+    align-items: start;
+  }
+
+  .desktop-shortcuts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .desktop-shortcut {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.55rem 0.35rem;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: #f2f6fa;
+    font-size: 0.8rem;
+    text-align: center;
+    word-break: break-word;
+  }
+
+  .desktop-shortcut:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .desktop-shortcut__icon {
+    font-size: 1.55rem;
+    line-height: 1;
+  }
+
+  .desktop-stage {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .desktop-intro h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.65rem, 2.8vw, 2.15rem);
+    margin: 0;
+    line-height: 1.15;
+    color: #ffffff;
+  }
+
+  .desktop-intro p {
+    margin: 0.25rem 0 0;
+    color: #dbe7f3;
+    font-size: 0.95rem;
+  }
+
+  .os-window {
+    background: var(--os-chrome);
+    color: #1f3246;
+    border: 1px solid var(--os-panel);
+    border-radius: 0.4rem;
+    box-shadow: 0 12px 28px rgba(15, 28, 42, 0.32);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .os-window[hidden] {
+    display: none;
+  }
+
+  .os-window--small {
+    max-width: 34rem;
+  }
+
+  .os-window__bar {
+    background: var(--os-panel);
+    color: var(--os-panel-text);
+    padding: 0.45rem 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .os-window__title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .os-window__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .os-win-btn,
+  .os-win-link {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--os-panel-text);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 0.25rem;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
+
+  .os-win-btn:hover,
+  .os-win-link:hover {
+    background: rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+  }
+
+  .os-window__body {
+    padding: 1rem;
+    background: var(--nb-paper);
+    color: var(--nb-ink);
+  }
+
+  .os-window__body--reader {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 1rem;
+    background: var(--os-desktop);
+  }
+
+  .os-window__body--terminal {
+    background: var(--os-terminal-bg);
+    color: var(--os-terminal-fg);
+    padding: 0.5rem;
+    min-height: 22rem;
+  }
+
+  .fm-toolbar {
+    background: var(--os-chrome);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--os-chrome-border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.8rem;
+  }
+
+  .fm-btn {
+    background: #eef3f7;
+    color: #1f3246;
+    border: 1px solid var(--os-chrome-border);
+    border-radius: 0.25rem;
+    padding: 0.22rem 0.6rem;
+    font-size: 0.82rem;
+  }
+
+  .fm-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .fm-btn[aria-pressed='true'] {
+    background: var(--os-panel);
+    color: #ffffff;
+    border-color: var(--os-panel);
+  }
+
+  .fm-breadcrumbs {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    min-width: 10rem;
+  }
+
+  .fm-breadcrumbs :global(.fm-crumb) {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.2rem;
+    padding: 0.12rem 0.35rem;
+    color: #1f3246;
+  }
+
+  .fm-breadcrumbs :global(.fm-crumb:hover) {
+    background: rgba(38, 62, 85, 0.12);
+  }
+
+  .fm-breadcrumbs :global(.fm-crumb[aria-current='location']) {
+    font-weight: 700;
+  }
+
+  .fm-view-switch {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .fm-body {
+    background: #f7f9fb;
+    color: #1f3246;
+    padding: 0.85rem;
+    min-height: 18rem;
+  }
+
+  .fm-body :global(.fm-empty) {
+    margin: 1.5rem 0.5rem;
+    color: #4f6478;
+    font-style: italic;
+  }
+
+  .fm-body :global(.fm-grid) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .fm-body[data-view='grid'] :global(.fm-grid) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.65rem;
+  }
+
+  .fm-body :global(.fm-item) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.25rem 0.45rem;
+    border-radius: 0.25rem;
+  }
+
+  .fm-body :global(.fm-item:hover) {
+    background: #e3ecf4;
+  }
+
+  .fm-body :global(.fm-item__btn) {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 0.25rem;
+    color: #1f3246;
+    min-width: 0;
+  }
+
+  .fm-body[data-view='grid'] :global(.fm-item) {
+    flex-direction: column;
+    align-items: stretch;
+    border: 1px solid #d2dde8;
+    background: #ffffff;
+    padding: 0.55rem;
+  }
+
+  .fm-body[data-view='grid'] :global(.fm-item__btn) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .fm-body :global(.fm-item__name) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .fm-body :global(.fm-item__badge) {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 0.08rem 0.35rem;
+    border-radius: 0.2rem;
+    background: #f4e6a0;
+    color: #283d53;
+  }
+
+  .fm-body :global(.fm-item__permalink) {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: #385779;
+    flex-shrink: 0;
+  }
+
+  .os-settings fieldset {
+    border: 1px solid var(--nb-border);
+    border-radius: 0.3rem;
+    padding: 0.75rem 1rem;
+    margin: 0 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .os-settings legend {
+    font-weight: 600;
+    padding: 0 0.35rem;
+  }
+
+  .os-settings label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .os-settings__note {
+    font-size: 0.85rem;
+    color: var(--nb-graphite);
+    margin: 0;
+  }
+
+  .desktop-taskbar {
+    background: var(--os-panel);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 0.4rem clamp(0.75rem, 2.5vw, 1.5rem);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .taskbar-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--os-panel-text);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.25rem;
+    padding: 0.28rem 0.7rem;
+    font-size: 0.84rem;
+  }
+
+  .taskbar-btn[hidden] {
+    display: none;
+  }
+
+  .taskbar-btn.is-active {
+    background: var(--os-folder);
+    color: #0e1e2e;
+    font-weight: 600;
+  }
+
+  @media (max-width: 760px) {
+    .desktop-workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .desktop-shortcuts {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .desktop-shortcut {
+      flex-direction: row;
+      padding: 0.4rem 0.65rem;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .os-window__body--reader {
+      max-height: none;
+    }
+  }
+</style>

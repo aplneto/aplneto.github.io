@@ -1,0 +1,24 @@
+---
+import NotebookSheet from '../components/reader/NotebookSheet.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../utils/content';
+---
+
+<BaseLayout title="Page not found" description="This notebook page does not exist.">
+  <NotebookSheet
+    title="404 — Page not found"
+    description="This page is missing from the notebook."
+    doodleKind="system"
+  >
+    <p>
+      The page or virtual path you requested isn't here. It may have been moved, or it may still be
+      an unwritten draft.
+    </p>
+    <ul>
+      <li><a href={withBase('/')}>Return to the desktop</a></li>
+      <li><a href={withBase('/notes/')}>Browse published notes</a></li>
+      <li><a href={withBase('/experiments/')}>Browse experiments</a></li>
+      <li><a href={withBase('/disclaimer/')}>Read the disclaimer</a></li>
+    </ul>
+  </NotebookSheet>
+</BaseLayout>

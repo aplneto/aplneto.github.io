@@ -1,0 +1,81 @@
+---
+import '@fontsource-variable/caveat';
+import '@fontsource-variable/source-serif-4';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '../styles/tokens.css';
+import '../styles/global.css';
+import '../styles/notebook.css';
+import Navigation from '../components/Navigation.astro';
+import { SITE_CONFIG } from '../site.config';
+import { withBase } from '../utils/content';
+
+interface Props {
+  title: string;
+  description?: string;
+  desktop?: boolean;
+}
+
+const { title, description = SITE_CONFIG.description, desktop = false } = Astro.props;
+const fullTitle = title === SITE_CONFIG.siteName ? title : `${title} — ${SITE_CONFIG.siteName}`;
+const canonicalUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).toString() : undefined;
+---
+
+<!doctype html>
+<html lang={SITE_CONFIG.language}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={SITE_CONFIG.authorName} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${SITE_CONFIG.siteName} RSS`}
+      href={withBase('/rss.xml')}
+    />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    <script is:inline>
+      (() => {
+        try {
+          const savedTheme = localStorage.getItem('notebook-theme');
+          if (savedTheme === 'light' || savedTheme === 'dark') {
+            document.documentElement.dataset.theme = savedTheme;
+          }
+          if (localStorage.getItem('notebook-reduced-motion') === 'true') {
+            document.documentElement.dataset.reducedMotion = 'true';
+          }
+        } catch {
+          // Ignore storage errors
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    {!desktop && <Navigation currentPath={Astro.url.pathname} />}
+
+    <main id="main-content" class:list={['site-main', { 'site-main--desktop': desktop }]}>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>{SITE_CONFIG.siteName}</strong> · {SITE_CONFIG.tagline}
+      </div>
+      <div class="site-footer__links">
+        <a href={withBase('/notes/')}>Notes</a>
+        <a href={withBase('/experiments/')}>Experiments</a>
+        <a href={withBase('/projects/')}>Projects</a>
+        <a href={withBase('/about/')}>About</a>
+        <a href={withBase('/disclaimer/')}>Disclaimer</a>
+        <a href={withBase('/rss.xml')}>RSS</a>
+      </div>
+    </footer>
+  </body>
+</html>

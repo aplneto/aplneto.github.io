@@ -1,0 +1,89 @@
+---
+import { getCollection } from 'astro:content';
+import NotebookSheet from '../../components/reader/NotebookSheet.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { CATEGORIES, EPISTEMIC_STATUSES, KINDS } from '../../site.config';
+import { formatIsoDate, isPublished, sortEntriesByDate, withBase } from '../../utils/content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('entries', (entry) => isPublished(entry));
+  const tagMap = new Map<string, typeof entries>();
+
+  for (const entry of entries) {
+    for (const tag of entry.data.tags) {
+      const list = tagMap.get(tag) ?? [];
+      list.push(entry);
+      tagMap.set(tag, list);
+    }
+  }
+
+  return Array.from(tagMap.entries()).map(([tag, taggedEntries]) => ({
+    params: { tag },
+    props: { tag, entries: sortEntriesByDate(taggedEntries) },
+  }));
+}
+
+const { tag, entries } = Astro.props;
+---
+
+<BaseLayout title={`Tag: #${tag}`} description={`Notebook entries tagged #${tag}.`}>
+  <NotebookSheet
+    title={`#${tag}`}
+    description={`${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} tagged #${tag}.`}
+    doodleKind="miscellaneous"
+  >
+    <ul class="tag-list">
+      {entries.map((entry) => (
+        <li>
+          <div class="tag-meta">
+            <time datetime={formatIsoDate(entry.data.publishedAt)}>
+              {formatIsoDate(entry.data.publishedAt)}
+            </time>
+            <span>{CATEGORIES[entry.data.category].shortLabel}</span>
+            <span>{KINDS[entry.data.kind]}</span>
+            <span>{EPISTEMIC_STATUSES[entry.data.status].label}</span>
+          </div>
+          <h2>
+            <a href={withBase(`/notes/${entry.id}/`)}>{entry.data.title}</a>
+          </h2>
+          <p>{entry.data.description}</p>
+        </li>
+      ))}
+    </ul>
+    <p>
+      <a href={withBase('/notes/')}>← Back to all notes</a>
+    </p>
+  </NotebookSheet>
+</BaseLayout>
+
+<style>
+  .tag-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem;
+  }
+
+  .tag-list li {
+    padding: 0.75rem 0 1rem;
+    border-bottom: 1px dashed var(--nb-rule);
+  }
+
+  .tag-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--nb-graphite);
+  }
+
+  .tag-list h2 {
+    margin: 0.25rem 0 0.2rem !important;
+    font-size: 1.65rem !important;
+  }
+
+  .tag-list p {
+    margin: 0 !important;
+    color: var(--nb-graphite);
+  }
+</style>
