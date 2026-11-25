@@ -8,15 +8,7 @@ interface Props {
 }
 
 const { currentPath = '/' } = Astro.props;
-
-const links = [
-  { href: withBase('/'), label: 'Desktop' },
-  { href: withBase('/notes/'), label: 'Notes' },
-  { href: withBase('/experiments/'), label: 'Experiments' },
-  { href: withBase('/projects/'), label: 'Projects' },
-  { href: withBase('/about/'), label: 'About' },
-  { href: withBase('/disclaimer/'), label: 'Disclaimer' },
-];
+void currentPath;
 ---
 
 <header class="site-nav-bar">
@@ -26,30 +18,7 @@ const links = [
       <span>{SITE_CONFIG.siteName}</span>
     </a>
 
-    <nav class="site-nav" aria-label="Primary navigation">
-      {
-        links.map((link) => {
-          const isCurrent =
-            link.href === withBase('/')
-              ? currentPath === '/' || currentPath === withBase('/')
-              : currentPath.startsWith(link.href);
-          return (
-            <a
-              href={link.href}
-              class:list={['site-nav__link', { 'is-current': isCurrent }]}
-              aria-current={isCurrent ? 'page' : undefined}
-            >
-              {link.label}
-            </a>
-          );
-        })
-      }
-    </nav>
-
     <div class="site-nav-actions">
-      <a class="site-rss-link" href={withBase('/rss.xml')} title="RSS feed">
-        RSS
-      </a>
       <ThemeSwitch compact />
     </div>
   </div>
@@ -86,50 +55,9 @@ const links = [
     text-decoration: none;
   }
 
-  .site-nav {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.25rem 0.45rem;
-  }
-
-  .site-nav__link {
-    color: #d6e4f2;
-    text-decoration: none;
-    font-size: 0.88rem;
-    padding: 0.25rem 0.55rem;
-    border-radius: 0.25rem;
-  }
-
-  .site-nav__link:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-  }
-
-  .site-nav__link.is-current {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-    font-weight: 600;
-  }
-
   .site-nav-actions {
     display: flex;
     align-items: center;
     gap: 0.65rem;
-  }
-
-  .site-rss-link {
-    color: #c5dcf3;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    text-decoration: none;
-    padding: 0.2rem 0.45rem;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 0.25rem;
-  }
-
-  .site-rss-link:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
   }
 </style>
