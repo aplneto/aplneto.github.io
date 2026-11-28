@@ -112,6 +112,14 @@ for (const node of Object.values(manifest.nodes)) {
           <span>Terminal</span>
         </button>
 
+        <a
+          href={withBase('/notes/')}
+          class="desktop-shortcut"
+        >
+          <span class="desktop-shortcut__icon" aria-hidden="true">🌐</span>
+          <span>Blog</span>
+        </a>
+
         <button
           type="button"
           class="desktop-shortcut"
@@ -617,6 +625,7 @@ for (const node of Object.values(manifest.nodes)) {
     color: #f2f6fa;
     font-size: 0.8rem;
     text-align: center;
+    text-decoration: none;
     word-break: break-word;
   }
 
